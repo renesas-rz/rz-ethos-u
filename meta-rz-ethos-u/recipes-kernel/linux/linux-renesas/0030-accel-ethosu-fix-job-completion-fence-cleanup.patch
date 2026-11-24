@@ -1,0 +1,93 @@
+From 25f71e2ad61dab1f4f29747a3f000887900482f2 Mon Sep 17 00:00:00 2001
+From: GuoHan Zhao <zhaoguohan@kylinos.cn>
+Date: Fri, 17 Jul 2026 14:11:45 +0800
+Subject: [PATCH] accel/ethosu: fix job completion fence cleanup
+
+commit 2d2a3adc91950f9a18829dadc7317fb5180a15c5 upstream.
+
+ethosu_ioctl_submit_job() allocates done_fence before validating buffer
+handles. Errors after allocation call ethosu_job_err_cleanup(), which frees
+the job but leaks the uninitialized fence.
+
+A scheduler dependency error also lets ethosu_job_run() return before
+dma_fence_init(). Normal cleanup then passes a zeroed refcount to
+dma_fence_put().
+
+Release done_fence in the common cleanup path and use
+dma_fence_was_initialized() to distinguish initialized fences from raw
+allocations.
+
+Fixes: 5a5e9c0228e6 ("accel: Add Arm Ethos-U NPU driver")
+Cc: stable@vger.kernel.org
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Link: https://sashiko.dev/#/patchset/20260716065219.931088-1-zhaoguohan@kylinos.cn?part=1
+Signed-off-by: GuoHan Zhao <zhaoguohan@kylinos.cn>
+Link: https://patch.msgid.link/20260717061145.1478139-6-zhaoguohan@kylinos.cn
+[robh: also fix goto]
+Signed-off-by: Rob Herring (Arm) <robh@kernel.org>
+[AC: Update to be compatible with CIP v6.1]
+Upstream-Status: Backport [https://git.kernel.org/linus/2d2a3adc91950f9a18829dadc7317fb5180a15c5]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_job.c | 11 +++++++++--
+ drivers/accel/ethosu/ethosu_job.h |  1 +
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_job.c b/drivers/accel/ethosu/ethosu_job.c
+index cd436b9b6c4a..887fee46ef15 100644
+--- a/drivers/accel/ethosu/ethosu_job.c
++++ b/drivers/accel/ethosu/ethosu_job.c
+@@ -154,6 +154,13 @@ static void ethosu_job_err_cleanup(struct ethosu_job *job)
+ 
+ 	drm_gem_object_put(job->cmd_bo);
+ 
++	if (job->done_fence) {
++		if (job->done_fence_initialized)
++			dma_fence_put(job->done_fence);
++		else
++			dma_fence_free(job->done_fence);
++	}
++
+ 	kfree(job);
+ }
+ 
+@@ -164,7 +171,6 @@ static void ethosu_job_cleanup(struct kref *ref)
+ 
+ 	pm_runtime_put_autosuspend(job->dev->base.dev);
+ 
+-	dma_fence_put(job->done_fence);
+ 	dma_fence_put(job->inference_done_fence);
+ 
+ 	ethosu_job_err_cleanup(job);
+@@ -214,6 +220,7 @@ static struct dma_fence *ethosu_job_run(struct drm_sched_job *sched_job)
+ 
+ 	dma_fence_init(fence, &ethosu_fence_ops, &dev->fence_lock,
+ 		       dev->fence_context, ++dev->emit_seqno);
++	job->done_fence_initialized = true;
+ 	dma_fence_get(fence);
+ 
+ 	ethosu_switch_perfmon(dev, job);
+@@ -409,7 +416,7 @@ static int ethosu_ioctl_submit_job(struct drm_device *dev, struct drm_file *file
+ 	ejob->done_fence = kzalloc(sizeof(*ejob->done_fence), GFP_KERNEL);
+ 	if (!ejob->done_fence) {
+ 		ret = -ENOMEM;
+-		goto out_cleanup_job;
++		goto out_put_job;
+ 	}
+ 
+ 	ret = drm_sched_job_init(&ejob->base,
+diff --git a/drivers/accel/ethosu/ethosu_job.h b/drivers/accel/ethosu/ethosu_job.h
+index 8988edd00eed..5f888f608c16 100644
+--- a/drivers/accel/ethosu/ethosu_job.h
++++ b/drivers/accel/ethosu/ethosu_job.h
+@@ -30,6 +30,7 @@ struct ethosu_job {
+ 	struct dma_fence *done_fence;
+ 
+ 	struct kref refcount;
++	bool done_fence_initialized;
+ };
+ 
+ int ethosu_ioctl_submit(struct drm_device *dev, void *data, struct drm_file *file);
+-- 
+2.34.1
+

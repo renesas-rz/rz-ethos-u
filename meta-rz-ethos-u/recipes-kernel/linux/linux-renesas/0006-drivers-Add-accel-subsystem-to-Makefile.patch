@@ -1,0 +1,23 @@
+From a5c6c6ffc8d31696bdfa846379a8b2029f1cdbd2 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 15 Sep 2026 13:10:29 +0000
+Subject: [PATCH] drivers: Add accel subsystem to Makefile
+
+Upstream-Status: Inappropriate [backport glue: upstream adds this hunk in a different commit]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/Makefile b/drivers/Makefile
+index 9fc91d2bbe4c..b18d06696425 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -190,3 +190,4 @@ obj-$(CONFIG_COUNTER)		+= counter/
+ obj-$(CONFIG_MOST)		+= most/
+ obj-$(CONFIG_PECI)		+= peci/
+ obj-$(CONFIG_HTE)		+= hte/
++obj-$(CONFIG_DRM_ACCEL)		+= accel/
+-- 
+2.34.1
+

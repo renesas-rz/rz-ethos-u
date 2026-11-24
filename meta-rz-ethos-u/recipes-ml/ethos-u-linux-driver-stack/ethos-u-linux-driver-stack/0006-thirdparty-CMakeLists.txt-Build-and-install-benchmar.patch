@@ -1,0 +1,38 @@
+From 44b080f17586cb6d4fcd28980a8e24ec330da7e8 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Thu, 24 Sep 2026 14:06:12 +0000
+Subject: [PATCH 1/1] thirdparty: CMakeLists.txt: Build and install
+ benchmark_model application
+
+Update the CMakeList.txt to build and install the TensorFlow Lite C++
+benchmarking application.
+
+Upstream-Status: Inappropriate [enable feature]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ thirdparty/CMakeLists.txt | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+index 622c757..ba473aa 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -84,4 +84,15 @@ if(BUILD_DELEGATE)
+         install(TARGETS _pywrap_tensorflow_interpreter_wrapper
+             LIBRARY DESTINATION "${TFLITE_RUNTIME_INSTALL_DIR}")
+     endif()
++
++    # Build and install the TensorFlow Lite benchmark_model tool
++    if(BUILD_BENCHMARK_MODEL)
++        if(NOT TARGET benchmark_model)
++            message(FATAL_ERROR "benchmark_model target not found")
++        endif()
++
++        add_custom_target(ethosu_benchmark_model ALL DEPENDS benchmark_model)
++
++        install(TARGETS benchmark_model RUNTIME DESTINATION "bin")
++    endif()
+ endif()
+-- 
+2.34.1
+

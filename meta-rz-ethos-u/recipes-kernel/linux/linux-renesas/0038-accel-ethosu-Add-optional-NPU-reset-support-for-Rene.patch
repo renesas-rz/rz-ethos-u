@@ -1,0 +1,98 @@
+From 47a335fd4ca7ceb784d9ce4f786f939c78440d5e Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 15 Sep 2026 11:33:34 +0000
+Subject: [PATCH] accel: ethosu: Add optional NPU reset support for Renesas
+ RZ/G3E EVK
+
+Currently, the Ethos-U driver expects NPU reset to be controlled by an
+external firmware or the bootloaders. Add an optional reset controller
+that can handle the reset configuration of the Renesas RZ/G3E EVK.
+
+Upstream-Status: Pending
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_device.h |  4 ++++
+ drivers/accel/ethosu/ethosu_drv.c    | 29 ++++++++++++++++++++++++++--
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_device.h b/drivers/accel/ethosu/ethosu_device.h
+index 8e5b595f4349..2a06fe765e51 100644
+--- a/drivers/accel/ethosu/ethosu_device.h
++++ b/drivers/accel/ethosu/ethosu_device.h
+@@ -7,6 +7,7 @@
+ #include <linux/bitfield.h>
+ #include <linux/bits.h>
+ #include <linux/mutex.h>
++#include <linux/reset.h>
+ #include <linux/types.h>
+ 
+ #include <drm/drm_device.h>
+@@ -221,6 +222,9 @@ struct ethosu_device {
+ 	} perfmon_state;
+ 
+ 	struct ethosu_perfmon *global_perfmon;
++
++	/* Resets for NPU on Renesas RZ/G3E EVK (main/AXI/APB) */
++	struct reset_control_bulk_data rsts[3];
+ };
+ 
+ #define to_ethosu_device(drm_dev) \
+diff --git a/drivers/accel/ethosu/ethosu_drv.c b/drivers/accel/ethosu/ethosu_drv.c
+index 99f9af4dfe67..5dc63fdd31cc 100644
+--- a/drivers/accel/ethosu/ethosu_drv.c
++++ b/drivers/accel/ethosu/ethosu_drv.c
+@@ -274,17 +274,32 @@ static int ethosu_device_resume(struct device *dev)
+ 	if (ret)
+ 		return ret;
+ 
++	ret = reset_control_bulk_deassert(ARRAY_SIZE(ethosudev->rsts), ethosudev->rsts);
++	if (ret)
++		goto err_clk;
++
+ 	ret = ethosu_reset(ethosudev);
+-	if (!ret)
+-		return 0;
++	if (ret)
++		goto err_reset;
+ 
++	return 0;
++
++err_reset:
++	reset_control_bulk_assert(ARRAY_SIZE(ethosudev->rsts), ethosudev->rsts);
++err_clk:
+ 	clk_bulk_disable_unprepare(ethosudev->num_clks, ethosudev->clks);
++
+ 	return ret;
+ }
+ 
+ static int ethosu_device_suspend(struct device *dev)
+ {
+ 	struct ethosu_device *ethosudev = dev_get_drvdata(dev);
++	int ret;
++
++	ret = reset_control_bulk_assert(ARRAY_SIZE(ethosudev->rsts), ethosudev->rsts);
++	if (ret)
++		dev_warn(dev, "failed to assert resets: %d\n", ret);
+ 
+ 	clk_bulk_disable_unprepare(ethosudev->num_clks, ethosudev->clks);
+ 	return 0;
+@@ -373,6 +388,16 @@ static int ethosu_probe(struct platform_device *pdev)
+ 	if (ethosudev->num_clks < 0)
+ 		return ethosudev->num_clks;
+ 
++	ethosudev->rsts[0].id = "nreset";
++	ethosudev->rsts[1].id = "nareset";
++	ethosudev->rsts[2].id = "npreset";
++
++	ret = devm_reset_control_bulk_get_optional_exclusive(&pdev->dev,
++							      ARRAY_SIZE(ethosudev->rsts),
++							      ethosudev->rsts);
++	if (ret)
++		return ret;
++
+ 	ret = drmm_mutex_init(&ethosudev->base, &ethosudev->perfmon_state.lock);
+ 	if (ret)
+ 		return ret;
+-- 
+2.34.1
+

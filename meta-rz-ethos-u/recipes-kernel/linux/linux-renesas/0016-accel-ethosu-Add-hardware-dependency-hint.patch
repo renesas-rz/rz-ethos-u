@@ -1,0 +1,35 @@
+From 03f600cd6f47d18f8c4b056ddaa54fde339540c9 Mon Sep 17 00:00:00 2001
+From: Jean Delvare <jdelvare@suse.de>
+Date: Wed, 1 Apr 2026 12:23:23 +0200
+Subject: [PATCH] accel: ethosu: Add hardware dependency hint
+
+commit 857fa8f2a5b184c206c703a3d9ce05cea683cfed upstream.
+
+The Ethos-U NPU is only available on ARM systems, so add a hardware
+dependency hint to prevent this driver from being needlessly
+included in kernels built for other architectures.
+
+Signed-off-by: Jean Delvare <jdelvare@suse.de>
+Link: https://patch.msgid.link/20260401122323.6127a77c@endymion
+Signed-off-by: Rob Herring (Arm) <robh@kernel.org>
+Upstream-Status: Backport [https://git.kernel.org/linus/857fa8f2a5b184c206c703a3d9ce05cea683cfed]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/accel/ethosu/Kconfig b/drivers/accel/ethosu/Kconfig
+index d25f9b3eb317..f68e6e286903 100644
+--- a/drivers/accel/ethosu/Kconfig
++++ b/drivers/accel/ethosu/Kconfig
+@@ -4,6 +4,7 @@ config DRM_ACCEL_ARM_ETHOSU
+ 	tristate "Arm Ethos-U65/U85 NPU"
+ 	depends on HAS_IOMEM
+ 	depends on DRM_ACCEL
++	depends on ARM || ARM64 || COMPILE_TEST
+ 	select DRM_GEM_DMA_HELPER
+ 	select DRM_SCHED
+ 	select GENERIC_ALLOCATOR
+-- 
+2.34.1
+

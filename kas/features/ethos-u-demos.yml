@@ -1,0 +1,15 @@
+header:
+  version: 14
+
+repos:
+  meta-rz-ethos-u-demos:
+    url: https://github.com/renesas-rz/meta-rz-ethos-u-demos.git
+    branch: master
+
+local_conf_header:
+  ethos-u-demos: |
+    # Add Image Classification demo application
+    IMAGE_INSTALL:append = " image-classification"
+
+    # Add application dependencies to the toolchain
+    TOOLCHAIN_TARGET_TASK:append = " packagegroup-rz-ethos-u-apps-sdk"

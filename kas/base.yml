@@ -1,0 +1,79 @@
+header:
+  version: 14
+
+distro: rz-vlp
+
+build_system: openembedded
+
+repos:
+  rz-ethos-u:
+    layers:
+      meta-rz-ethos-u:
+  meta-renesas:
+    url: https://github.com/renesas-rz/meta-renesas.git
+    # tag BSP-4.0.2
+    commit: 2655d4aaa30be9b5b293e9df14393c6c4b7ffddb
+    layers:
+      meta-rz-bsp:
+      meta-rz-distro:
+  poky:
+    url: "https://git.yoctoproject.org/git/poky"
+    # scarthgap-5.0.14
+    commit: 7e8674996b0164b07e56bc066d0fba790e627061
+    layers:
+      meta:
+      meta-poky:
+      meta-yocto-bsp:
+  meta-arm:
+    url: https://git.yoctoproject.org/meta-arm
+    # yocto-5.0.2
+    commit: 8e0f8af90fefb03f08cd2228cde7a89902a6b37c
+    layers:
+      meta-arm-toolchain:
+      meta-arm:
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    # scarthgap HEAD
+    commit: 89a01c3d9ad1f8fce6aeb4dd0e694cfa28d42099
+    layers:
+      meta-oe:
+      meta-python:
+
+bblayers_conf_header:
+  standard: |
+    POKY_BBLAYERS_CONF_VERSION = "2"
+
+local_conf_header:
+  kernel_version_config:
+    PREFERRED_VERSION_linux-renesas = "6.1%"
+
+  standard: |
+    CONF_VERSION = "2"
+    BB_DISKMON_DIRS ?= " \
+        STOPTASKS,${TMPDIR},1G,100K \
+        STOPTASKS,${DL_DIR},1G,100K \
+        STOPTASKS,${SSTATE_DIR},1G,100K \
+        STOPTASKS,/tmp,100M,100K \
+        HALT,${TMPDIR},100M,1K \
+        HALT,${DL_DIR},100M,1K \
+        HALT,${SSTATE_DIR},100M,1K \
+        HALT,/tmp,10M,1K \
+    "
+
+    # Extra image configuration defaults
+    EXTRA_IMAGE_FEATURES = "debug-tweaks tools-profile tools-testapps"
+
+    # Remove dnf package which causes high CPU workload
+    PACKAGE_INSTALL:remove = " dnf "
+
+    # Additional image features
+    USER_CLASSES ?= "buildstats"
+
+    # Add Ethos-U Linux Driver Stack
+    IMAGE_INSTALL:append = " ethos-u-linux-driver-stack"
+
+    # Add Ethos-U Vela compiler and tools for creating model input data
+    IMAGE_INSTALL:append = " packagegroup-rz-ethos-u-tools"
+
+    # Use WIC file for eSD boot
+    WKS_FILE = "rz-image-bootpart-esd.wks" 

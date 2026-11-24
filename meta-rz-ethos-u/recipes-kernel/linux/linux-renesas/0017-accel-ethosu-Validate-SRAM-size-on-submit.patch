@@ -1,0 +1,55 @@
+From 7a66ad93d5c13c9943f9970e52521a82d5075a66 Mon Sep 17 00:00:00 2001
+From: "Rob Herring (Arm)" <robh@kernel.org>
+Date: Wed, 13 May 2026 13:54:34 -0500
+Subject: [PATCH] accel: ethosu: Validate SRAM size on submit
+
+commit 9cff90774872ed6613b7571ce018b5b455d86890 upstream.
+
+Regions with a BO are checked against the BO size, but the SRAM
+region is not. The SRAM region doesn't have a BO, but the command stream
+region size should be checked against the SRAM size. The job's
+"sram_size" isn't useful here because an evil userspace could lie about
+the size.
+
+Signed-off-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20260513185434.1667045-1-robh@kernel.org
+Signed-off-by: Tomeu Vizoso <tomeu@tomeuvizoso.net>
+Reviewed-by: Tomeu Vizoso <tomeu@tomeuvizoso.net>
+Upstream-Status: Backport [https://git.kernel.org/linus/9cff90774872ed6613b7571ce018b5b455d86890]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_job.c | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_job.c b/drivers/accel/ethosu/ethosu_job.c
+index 8292c961398a..86d5aee9c12b 100644
+--- a/drivers/accel/ethosu/ethosu_job.c
++++ b/drivers/accel/ethosu/ethosu_job.c
+@@ -411,9 +411,21 @@ static int ethosu_ioctl_submit_job(struct drm_device *dev, struct drm_file *file
+ 		struct drm_gem_object *gem;
+ 
+ 		/* Can only omit a BO handle if the region is not used or used for SRAM */
+-		if (!job->region_bo_handles[i] &&
+-		    (!cmd_info->region_size[i] || (i == ETHOSU_SRAM_REGION && job->sram_size)))
+-			continue;
++		if (!job->region_bo_handles[i]) {
++			if (!cmd_info->region_size[i])
++				continue;
++			if (i == ETHOSU_SRAM_REGION) {
++				if (cmd_info->region_size[i] <= edev->npu_info.sram_size)
++					continue;
++
++				dev_err(dev->dev,
++					"cmd stream region %d size greater than SRAM size (%llu > %u)\n",
++					i, cmd_info->region_size[i],
++					edev->npu_info.sram_size);
++				ret = -EINVAL;
++				goto out_cleanup_job;
++			}
++		}
+ 
+ 		if (job->region_bo_handles[i] && !cmd_info->region_size[i]) {
+ 			dev_err(dev->dev,
+-- 
+2.34.1
+

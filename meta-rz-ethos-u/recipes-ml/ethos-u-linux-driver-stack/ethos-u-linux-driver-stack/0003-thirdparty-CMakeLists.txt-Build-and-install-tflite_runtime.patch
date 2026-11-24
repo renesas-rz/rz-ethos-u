@@ -1,0 +1,56 @@
+From 1bd6c089bb1d28bb0e3637c873a383932bdff08e Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Thu, 24 Sep 2026 11:16:01 +0100
+Subject: [PATCH] thirdparty: CMakeLists.txt: Build and install
+ tflite_runtime library
+
+Update the CMakeList.txt to build and install the tflite_runtime python
+library.
+
+Upstream-Status: Inappropriate [enable feature]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ thirdparty/CMakeLists.txt | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+index bd765dc..622c757 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -55,4 +55,33 @@ if(BUILD_DELEGATE)
+             LIBRARY DESTINATION "lib"
+             ARCHIVE DESTINATION "lib")
+     endif()
++
++    # Build and install the TensorFlow Lite Python bindings (tflite_runtime)
++    if(BUILD_TFLITE_RUNTIME)
++        if(NOT TARGET _pywrap_tensorflow_interpreter_wrapper)
++            message(FATAL_ERROR "_pywrap_tensorflow_interpreter_wrapper target not found")
++        endif()
++        if(NOT PYTHON_INCLUDE_DIR)
++            message(FATAL_ERROR "PYTHON_INCLUDE_DIR must be set to build the TensorFlow Lite Python bindings")
++        endif()
++        if(NOT PYBIND11_INCLUDE_DIR)
++            message(FATAL_ERROR "PYBIND11_INCLUDE_DIR must be set to build the TensorFlow Lite Python bindings")
++        endif()
++        if(NOT NUMPY_INCLUDE_DIR)
++            message(FATAL_ERROR "NUMPY_INCLUDE_DIR must be set to build the TensorFlow Lite Python bindings")
++        endif()
++        if(NOT TFLITE_RUNTIME_INSTALL_DIR)
++            message(FATAL_ERROR "TFLITE_RUNTIME_INSTALL_DIR must be set to install the TensorFlow Lite Python bindings")
++        endif()
++
++        target_include_directories(_pywrap_tensorflow_interpreter_wrapper PRIVATE
++            ${PYTHON_INCLUDE_DIR}
++            ${PYBIND11_INCLUDE_DIR}
++            ${NUMPY_INCLUDE_DIR})
++
++        add_custom_target(ethosu_tflite_runtime ALL DEPENDS _pywrap_tensorflow_interpreter_wrapper)
++
++        install(TARGETS _pywrap_tensorflow_interpreter_wrapper
++            LIBRARY DESTINATION "${TFLITE_RUNTIME_INSTALL_DIR}")
++    endif()
+ endif()
+-- 
+2.34.1
+

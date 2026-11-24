@@ -1,0 +1,5 @@
+models:
+- name: mobilenet_v2_1.0_224_INT8
+  data_directory: mobilenet_v2_1.0_224_INT8/
+  model_file: mobilenet_v2_1.0_224_INT8_vela.tflite
+  input_file: all-inputs.bin

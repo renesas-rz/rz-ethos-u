@@ -1,0 +1,184 @@
+From 22ae7a1e00ded65848fd73f8250e4c3a15b17560 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 15 Sep 2026 10:48:07 +0000
+Subject: [PATCH] accel: ethosu: Add Ethos-U55 NPU support
+
+Add Ethos-U driver support for the Arm Ethos-U55 NPU.
+
+Upstream-Status: Pending
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_device.h  | 22 +++++++++----------
+ drivers/accel/ethosu/ethosu_drv.c     | 31 ++++++++++++++++++---------
+ drivers/accel/ethosu/ethosu_perfmon.c |  7 +++++-
+ 3 files changed, 38 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_device.h b/drivers/accel/ethosu/ethosu_device.h
+index 6fb2efbda1d8..8e5b595f4349 100644
+--- a/drivers/accel/ethosu/ethosu_device.h
++++ b/drivers/accel/ethosu/ethosu_device.h
+@@ -29,10 +29,10 @@ struct gen_pool;
+ #define NPU_REG_PROT		0x0024
+ #define NPU_REG_CONFIG		0x0028
+ #define NPU_REG_REGIONCFG	0x003c
+-#define NPU_REG_AXILIMIT0	0x0040		// U65
+-#define NPU_REG_AXILIMIT1	0x0044		// U65
+-#define NPU_REG_AXILIMIT2	0x0048		// U65
+-#define NPU_REG_AXILIMIT3	0x004c		// U65
++#define NPU_REG_AXILIMIT0	0x0040		// U55, U65
++#define NPU_REG_AXILIMIT1	0x0044		// U55, U65
++#define NPU_REG_AXILIMIT2	0x0048		// U55, U65
++#define NPU_REG_AXILIMIT3	0x004c		// U55, U65
+ #define NPU_REG_MEM_ATTR0	0x0040		// U85
+ #define NPU_REG_MEM_ATTR1	0x0044		// U85
+ #define NPU_REG_MEM_ATTR2	0x0048		// U85
+@@ -105,7 +105,7 @@ enum ethosu_cmds {
+ 	NPU_SET_IFM_PAD_BOTTOM = 0x103,
+ 	NPU_SET_IFM_DEPTH_M1 = 0x104,
+ 	NPU_SET_IFM_PRECISION = 0x105,
+-	NPU_SET_IFM_BROADCAST = 0x108,
++	NPU_SET_IFM_BROADCAST = 0x108, // U85 only
+ 	NPU_SET_IFM_WIDTH0_M1 = 0x10a,
+ 	NPU_SET_IFM_HEIGHT0_M1 = 0x10b,
+ 	NPU_SET_IFM_HEIGHT1_M1 = 0x10c,
+@@ -125,8 +125,8 @@ enum ethosu_cmds {
+ 	NPU_SET_SCALE_REGION = 0x129,
+ 	NPU_SET_DMA0_SRC_REGION = 0x130,
+ 	NPU_SET_DMA0_DST_REGION = 0x131,
+-	NPU_SET_DMA0_SIZE0 = 0x132,
+-	NPU_SET_DMA0_SIZE1 = 0x133,
++	NPU_SET_DMA0_SIZE0 = 0x132, // U65, U85
++	NPU_SET_DMA0_SIZE1 = 0x133, // U65, U85
+ 	NPU_SET_IFM2_BROADCAST = 0x180,
+ 	NPU_SET_IFM2_PRECISION = 0x185,
+ 	NPU_SET_IFM2_WIDTH0_M1 = 0x18a,
+@@ -156,8 +156,8 @@ enum ethosu_cmds {
+ 	NPU_SET_DMA0_LEN = 0x4032,
+ 	NPU_SET_DMA0_SRC_STRIDE0 = 0x4033,
+ 	NPU_SET_DMA0_SRC_STRIDE1 = 0x4034,
+-	NPU_SET_DMA0_DST_STRIDE0 = 0x4035,
+-	NPU_SET_DMA0_DST_STRIDE1 = 0x4036,
++	NPU_SET_DMA0_DST_STRIDE0 = 0x4035, // U85 only
++	NPU_SET_DMA0_DST_STRIDE1 = 0x4036, // U85 only
+ 	NPU_SET_IFM2_BASE0 = 0x4080,
+ 	NPU_SET_IFM2_BASE1 = 0x4081,
+ 	NPU_SET_IFM2_BASE2 = 0x4082,
+@@ -171,8 +171,8 @@ enum ethosu_cmds {
+ 	NPU_SET_WEIGHT2_BASE = 0x4092,
+ 	NPU_SET_SCALE1_LENGTH = 0x4093,
+ 	NPU_SET_WEIGHT2_LENGTH = 0x4093,
+-	NPU_SET_WEIGHT3_BASE = 0x4094,
+-	NPU_SET_WEIGHT3_LENGTH = 0x4095,
++	NPU_SET_WEIGHT3_BASE = 0x4094, // U85 only
++	NPU_SET_WEIGHT3_LENGTH = 0x4095, // U85 only
+ };
+ 
+ #define ETHOSU_SRAM_REGION	2	/* Matching Vela compiler */
+diff --git a/drivers/accel/ethosu/ethosu_drv.c b/drivers/accel/ethosu/ethosu_drv.c
+index 50ae9f7c70e6..99f9af4dfe67 100644
+--- a/drivers/accel/ethosu/ethosu_drv.c
++++ b/drivers/accel/ethosu/ethosu_drv.c
+@@ -211,8 +211,11 @@ static const struct drm_driver ethosu_drm_driver = {
+ 	.gem_create_object = ethosu_gem_create_object,
+ };
+ 
++#define U55_AXI_LIMIT_CFG	0x0f1f0070
++#define U55_REGIONCFG_CFG	0x00005553
+ #define U65_DRAM_AXI_LIMIT_CFG	0x1f3f0002
+ #define U65_SRAM_AXI_LIMIT_CFG	0x1f3f00b0
++#define U65_U85_REGIONCFG_CFG	0x0000aa8a
+ #define U85_AXI_EXT_CFG		0x00021f3f
+ #define U85_AXI_SRAM_CFG	0x00021f3f
+ #define U85_MEM_ATTR0_CFG	0x00000000
+@@ -221,6 +224,7 @@ static const struct drm_driver ethosu_drm_driver = {
+ static int ethosu_reset(struct ethosu_device *ethosudev)
+ {
+ 	int ret;
++	u8 product;
+ 	u32 reg;
+ 
+ 	writel_relaxed(RESET_PENDING_CSL, ethosudev->regs + NPU_REG_RESET);
+@@ -235,15 +239,20 @@ static int ethosu_reset(struct ethosu_device *ethosudev)
+ 			 readl_relaxed(ethosudev->regs + NPU_REG_PROT));
+ 	}
+ 
+-	/*
+-	 * Assign region 2 (SRAM) to AXI M0 (AXILIMIT0),
+-	 * everything else to AXI M1 (AXILIMIT2)
+-	 */
+-	writel_relaxed(0x0000aa8a, ethosudev->regs + NPU_REG_REGIONCFG);
+-	if (get_ethosu_product(ethosudev) == ETHOS_U65_PRODUCT_CONFIG) {
+-		writel_relaxed(U65_SRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT0);
+-		writel_relaxed(U65_DRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT2);
++	product = get_ethosu_product(ethosudev);
++	if (product == ETHOS_U55_PRODUCT_CONFIG) {
++		writel_relaxed(U55_REGIONCFG_CFG, ethosudev->regs + NPU_REG_REGIONCFG);
++		writel_relaxed(0x00000002, ethosudev->regs + NPU_REG_QCONFIG);
++		writel_relaxed(U55_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT0);
++		writel_relaxed(U55_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT1);
++		writel_relaxed(U55_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT2);
++		writel_relaxed(U55_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT3);
++	} else if (product == ETHOS_U65_PRODUCT_CONFIG) {
++		writel_relaxed(U65_U85_REGIONCFG_CFG, ethosudev->regs + NPU_REG_REGIONCFG);
++		writel_relaxed(U65_DRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT0);
++		writel_relaxed(U65_SRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT2);
+ 	} else {
++		writel_relaxed(U65_U85_REGIONCFG_CFG, ethosudev->regs + NPU_REG_REGIONCFG);
+ 		writel_relaxed(U85_AXI_SRAM_CFG, ethosudev->regs + NPU_REG_AXI_SRAM);
+ 		writel_relaxed(U85_AXI_EXT_CFG, ethosudev->regs + NPU_REG_AXI_EXT);
+ 		writel_relaxed(U85_MEM_ATTR0_CFG, ethosudev->regs + NPU_REG_MEM_ATTR0);	// SRAM
+@@ -355,8 +364,6 @@ static int ethosu_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 	platform_set_drvdata(pdev, ethosudev);
+ 
+-	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
+-
+ 	ethosudev->regs = devm_platform_ioremap_resource(pdev, 0);
+ 	if (IS_ERR(ethosudev->regs))
+ 		return PTR_ERR(ethosudev->regs);
+@@ -378,6 +385,9 @@ static int ethosu_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
++	dma_set_mask_and_coherent(&pdev->dev,
++				  DMA_BIT_MASK(get_ethosu_product(ethosudev) == ETHOS_U55_PRODUCT_CONFIG ? 32 : 40));
++
+ 	ret = drm_dev_register(&ethosudev->base, 0);
+ 	if (ret)
+ 		pm_runtime_dont_use_autosuspend(ethosudev->base.dev);
+@@ -400,6 +410,7 @@ static int ethosu_remove(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id dt_match[] = {
++	{ .compatible = "arm,ethos-u55" },
+ 	{ .compatible = "arm,ethos-u65" },
+ 	{ .compatible = "arm,ethos-u85" },
+ 	{}
+diff --git a/drivers/accel/ethosu/ethosu_perfmon.c b/drivers/accel/ethosu/ethosu_perfmon.c
+index 3013bfe3c59a..89051e005490 100644
+--- a/drivers/accel/ethosu/ethosu_perfmon.c
++++ b/drivers/accel/ethosu/ethosu_perfmon.c
+@@ -162,6 +162,7 @@ int ethosu_ioctl_perfmon_create(struct drm_device *dev, void *data,
+ 	struct ethosu_perfmon *perfmon;
+ 	unsigned int i, event_max;
+ 	int ret;
++	u8 product;
+ 	u32 id;
+ 
+ 	/* Number of monitored counters cannot exceed HW limits. */
+@@ -169,7 +170,11 @@ int ethosu_ioctl_perfmon_create(struct drm_device *dev, void *data,
+ 		return -EINVAL;
+ 
+ 	/* Make sure all counters are valid. */
+-	if (get_ethosu_product(ethosu) == ETHOS_U65_PRODUCT_CONFIG)
++	product = get_ethosu_product(ethosu);
++
++	if (product == ETHOS_U55_PRODUCT_CONFIG)
++		event_max = 399;
++	else if (product == ETHOS_U65_PRODUCT_CONFIG)
+ 		event_max = 433;
+ 	else
+ 		event_max = 671;
+-- 
+2.34.1
+

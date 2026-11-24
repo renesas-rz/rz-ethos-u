@@ -1,0 +1,13 @@
+*.swp
+*.orig
+*.rej
+.config.yaml
+.config.yaml.old
+.venv
+build
+meta-arm
+meta-openembedded
+meta-renesas
+poky
+meta-rz-ethos-u-demos
+meta-rz-features

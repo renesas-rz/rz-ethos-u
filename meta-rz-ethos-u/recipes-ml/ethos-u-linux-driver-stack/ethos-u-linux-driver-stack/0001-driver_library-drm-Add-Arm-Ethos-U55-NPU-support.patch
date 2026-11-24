@@ -1,0 +1,46 @@
+From 7281eb4d6becfe2830dabe2f0f157a4cc4c1f816 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Wed, 16 Sep 2026 09:59:57 +0000
+Subject: [PATCH] driver_library: drm: Add Arm Ethos-U55 NPU support
+
+Upstream-Status: Pending
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ driver_library/src/drm/ethosu_drm_cop2.cpp | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/driver_library/src/drm/ethosu_drm_cop2.cpp b/driver_library/src/drm/ethosu_drm_cop2.cpp
+index 3fc0bd9..55267f9 100644
+--- a/driver_library/src/drm/ethosu_drm_cop2.cpp
++++ b/driver_library/src/drm/ethosu_drm_cop2.cpp
+@@ -50,13 +50,16 @@ constexpr uint16_t kMetadataSupportedMinor = 0;
+ constexpr uint32_t kMetadataSupportedFeatures = 0x2U;
+ /** Size of the `metadata_length` field at the start of a command-stream entry. */
+ constexpr size_t kMetadataLengthFieldSize = sizeof(uint32_t);
++/** Product code used by the direct Ethos-U55 path. */
++constexpr uint32_t kProductU55 = 0U;
+ /** Product code used by the direct Ethos-U65 path. */
+ constexpr uint32_t kProductU65 = 1U;
+ /** Product code used by the direct Ethos-U85 path. */
+ constexpr uint32_t kProductU85 = 2U;
+ 
+-/** Common config bits compared by both the Ethos-U65 and Ethos-U85 direct kernel paths:
+- * product[31:28], custom_dma[27], cmd_stream_version[7:4], macs_per_cc[3:0]. */
++/** Common config bits compared by the Ethos-U55, Ethos-U65 and Ethos-U85 direct
++ * kernel paths: product[31:28], custom_dma[27], cmd_stream_version[7:4],
++ * macs_per_cc[3:0]. */
+ constexpr uint32_t kCommonConfigMask = 0xF80000FFU;
+ /** Ethos-U85-specific config bits compared by the direct kernel path:
+  * num_axi_ext[10], num_axi_sram[9:8]. */
+@@ -183,7 +186,7 @@ bool validateConfig(uint32_t actualConfig, uint32_t requestedConfig) {
+         return (actualConfig & kU85ConfigMask) == (requestedConfig & kU85ConfigMask);
+     }
+ 
+-    if (product == kProductU65) {
++    if (product == kProductU55 || product == kProductU65) {
+         return true;
+     }
+ 
+-- 
+2.34.1
+

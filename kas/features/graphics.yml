@@ -1,0 +1,8 @@
+header:
+  version: 14
+
+repos:
+  meta-rz-features:
+    path: meta-rz-features
+    layers:
+      meta-rz-graphics:

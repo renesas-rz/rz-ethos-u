@@ -1,0 +1,38 @@
+From 2bb7a614448114165e8dbd2448c7beec5e277022 Mon Sep 17 00:00:00 2001
+From: "Ricardo B. Marliere" <ricardo@marliere.net>
+Date: Mon, 19 Feb 2024 16:48:28 -0300
+Subject: [PATCH] accel: constify the struct device_type usage
+
+commit 576d7cc5a9e29e4cc579ffb0f9afc209e34eea31 upstream.
+
+Since commit aed65af1cc2f ("drivers: make device_type const"), the driver
+core can properly handle constant struct device_type. Move the
+accel_sysfs_device_minor variable to be a constant structure as well,
+placing it into read-only memory which can not be modified at runtime.
+
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Signed-off-by: Ricardo B. Marliere <ricardo@marliere.net>
+Reviewed-by: Oded Gabbay <ogabbay@kernel.org>
+Signed-off-by: Oded Gabbay <ogabbay@kernel.org>
+Upstream-Status: Backport [https://git.kernel.org/linus/576d7cc5a9e29e4cc579ffb0f9afc209e34eea31]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/drm_accel.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/accel/drm_accel.c b/drivers/accel/drm_accel.c
+index a5ee84a4017a..3f6652ffbbc0 100644
+--- a/drivers/accel/drm_accel.c
++++ b/drivers/accel/drm_accel.c
+@@ -23,7 +23,7 @@ static struct idr accel_minors_idr;
+ static struct dentry *accel_debugfs_root;
+ static struct class *accel_class;
+ 
+-static struct device_type accel_sysfs_device_minor = {
++static const struct device_type accel_sysfs_device_minor = {
+ 	.name = "accel_minor"
+ };
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,38 @@
+From 1135fccdea387458fc3c07da28a4d5cf02569388 Mon Sep 17 00:00:00 2001
+From: Jani Nikula <jani.nikula@intel.com>
+Date: Mon, 14 Sep 2026 14:21:41 +0000
+Subject: [PATCH] drm: include drm_print.h where needed
+
+commit f6e8dc9edf963dbc99085e54f6ced6da9daa6100 upstream.
+
+There are a gazillion files that depend on drm_print.h being indirectly
+included via drm_buddy.h, drm_mm.h, or ttm/ttm_resource.h. In
+preparation for removing those includes, explicitly include drm_print.h
+where needed.
+
+Cc: Thomas Zimmermann <tzimmermann@suse.de>
+Reviewed-by: Thomas Zimmermann <tzimmermann@suse.de>
+Signed-off-by: Jani Nikula <jani.nikula@intel.com>
+Link: https://lore.kernel.org/r/5fe67395907be33eb5199ea6d540e29fddee71c8.1761734313.git.jani.nikula@intel.com
+[AC: Manually applied to Ethos-U source code only]
+Upstream-Status: Backport [https://git.kernel.org/linus/f6e8dc9edf963dbc99085e54f6ced6da9daa6100]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_job.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/accel/ethosu/ethosu_job.c b/drivers/accel/ethosu/ethosu_job.c
+index f94015c5e22b..6db4fca8ba59 100644
+--- a/drivers/accel/ethosu/ethosu_job.c
++++ b/drivers/accel/ethosu/ethosu_job.c
+@@ -12,6 +12,7 @@
+ #include <drm/drm_file.h>
+ #include <drm/drm_gem.h>
+ #include <drm/drm_gem_dma_helper.h>
++#include <drm/drm_print.h>
+ #include <drm/ethosu_accel.h>
+ 
+ #include "ethosu_device.h"
+-- 
+2.34.1
+

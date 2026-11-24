@@ -1,0 +1,34 @@
+From d564ddb4dfdede7aabe7b6a1755619a251d3ddf9 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Wed, 14 Oct 2026 13:30:00 +0100
+Subject: [PATCH] pyproject.toml: Use table form for license
+
+The setuptools version provided by Yocto Scarthgap does not support
+the SPDX license expression and license-files fields in the project
+table.
+
+Update the table to be compatible with Yocto Scarthgap.
+
+Upstream-Status: Inappropriate [OE-Core specific: setuptools version in scarthgap]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ pyproject.toml | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/pyproject.toml b/pyproject.toml
+index 001781ff..70f0f32c 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -19,8 +19,7 @@ name = "ethos-u-vela"
+ description = "Neural network model compiler for Arm Ethos-U NPUs"
+ requires-python = ">=3.10"
+ authors = [{name = "Arm Ltd", email = "mlg-vela@arm.com"}]
+-license = "Apache-2.0"
+-license-files = ["LICENSE.txt"]
++license = { text = "Apache-2.0" }
+ classifiers = [
+     "Development Status :: 5 - Production/Stable",
+     "Intended Audience :: Developers",
+-- 
+2.34.1
+

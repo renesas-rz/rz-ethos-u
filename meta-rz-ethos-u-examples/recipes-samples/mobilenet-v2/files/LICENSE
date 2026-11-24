@@ -1,0 +1,5 @@
+Source: https://github.com/ARM-software/ML-zoo/blob/22.02/models/image_classification/mobilenet_v2_1.0_224/tflite_int8/mobilenet_v2_1.0_224_INT8.tflite
+License: Apache License 2.0 (Model, Arm Ethos-U Vela Compiler)
+Notes: Model compiled using the generate-model-data-host.sh script from this
+       repositories scripts/vela/ directory, which makes use of the Arm Ethos-U
+       Vela Compiler. Seed value of 10 was used for input generation.

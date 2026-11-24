@@ -1,0 +1,18 @@
+header:
+  version: 14
+
+repos:
+  rz-ethos-u:
+    layers:
+      meta-rz-ethos-u-examples:
+
+local_conf_header:
+  ethos-u-examples: |
+    # Add MobileNet V2 Classifier sample applications
+    IMAGE_INSTALL:append = " mobilenet-v2-classifier"
+
+    # Add Model Executor sample applications
+    IMAGE_INSTALL:append = " model-executor"
+
+    # Add application dependencies to the toolchain
+    TOOLCHAIN_TARGET_TASK:append = " packagegroup-rz-ethos-u-apps-sdk"

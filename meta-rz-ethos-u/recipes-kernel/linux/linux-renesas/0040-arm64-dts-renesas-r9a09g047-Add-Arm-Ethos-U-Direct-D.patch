@@ -1,0 +1,59 @@
+From 2dfc729883f94cdff6c70c5ca1e3a6ad076d1535 Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 15 Sep 2026 15:09:14 +0000
+Subject: [PATCH] arm64: dts: renesas: r9a09g047: Add Arm Ethos-U Direct Driver
+ node
+
+Add Arm Ethos-U Direct Driver node support for r9a09g047 SoC.
+
+Upstream-Status: Pending
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ arch/arm64/boot/dts/renesas/r9a09g047.dtsi | 24 ++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/renesas/r9a09g047.dtsi b/arch/arm64/boot/dts/renesas/r9a09g047.dtsi
+index 436b3cf83f2f..0ba284846dda 100644
+--- a/arch/arm64/boot/dts/renesas/r9a09g047.dtsi
++++ b/arch/arm64/boot/dts/renesas/r9a09g047.dtsi
+@@ -178,6 +178,14 @@ rtxin_clk: rtxin-clk {
+ 		clock-frequency = <0>;
+ 	};
+ 
++	sram: sram@8043000 {
++		compatible = "mmio-sram";
++		reg = <0 0x08043000 0 0x3D000>;
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++	};
++
+ 	soc: soc {
+ 		compatible = "simple-bus";
+ 		interrupt-parent = <&gic>;
+@@ -2968,6 +2976,22 @@ ostm7: timer@12c03000 {
+ 			power-domains = <&cpg>;
+ 			status = "disabled";
+ 		};
++
++		npu@19c80000 {
++			compatible = "arm,ethos-u55";
++			reg = <0 0x19c80000 0 0x10000>;
++			interrupts = <GIC_SPI 924 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&cpg CPG_MOD 0x1ab>,
++				 <&cpg CPG_MOD 0x1ac>,
++				 <&cpg CPG_MOD 0x1ad>;
++			clock-names = "aclk", "pclk", "mclk";
++			resets = <&cpg 0x120>,
++				 <&cpg 0x121>,
++				 <&cpg 0x122>;
++			reset-names = "nreset", "nareset", "npreset";
++			power-domains = <&cpg>;
++			sram = <&sram>;
++		};
+ 	};
+ 
+ 	thermal-zones {
+-- 
+2.34.1
+

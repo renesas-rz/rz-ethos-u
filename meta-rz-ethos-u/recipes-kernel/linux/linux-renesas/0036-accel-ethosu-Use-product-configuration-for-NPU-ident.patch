@@ -1,0 +1,145 @@
+From 3ef65706b39a6cb007710b58236b3e324a1f60cf Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 15 Sep 2026 10:00:32 +0000
+Subject: [PATCH] accel: ethosu: Use product configuration for NPU
+ identification
+
+The arch_major_rev field of the ID register is 1 for both ARM Ethos-U55
+and Ethos-U65 NPUs. Improve the accuracy of NPU identification by using
+the product field of the CONFIG register that differs across the Arm
+Ethos-U NPU family.
+
+Upstream-Status: Pending
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_device.h  |  9 +++++++--
+ drivers/accel/ethosu/ethosu_drv.c     |  4 ++--
+ drivers/accel/ethosu/ethosu_gem.c     | 11 ++++++-----
+ drivers/accel/ethosu/ethosu_perfmon.c |  6 +++++-
+ 4 files changed, 20 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_device.h b/drivers/accel/ethosu/ethosu_device.h
+index 1eca8590e68d..6fb2efbda1d8 100644
+--- a/drivers/accel/ethosu/ethosu_device.h
++++ b/drivers/accel/ethosu/ethosu_device.h
+@@ -61,6 +61,7 @@ struct gen_pool;
+ 
+ #define CONFIG_MACS_PER_CC_MASK	GENMASK(3, 0)
+ #define CONFIG_CMD_STREAM_VER_MASK	GENMASK(7, 4)
++#define CONFIG_PRODUCT GENMASK(31, 28)
+ 
+ #define STATUS_STATE_RUNNING	BIT(0)
+ #define STATUS_IRQ_RAISED	BIT(1)
+@@ -86,6 +87,10 @@ struct gen_pool;
+ #define PMU_EV_TYPE_CYCLES	0x11
+ #define PMU_EV_TYPE_IDLE	0x20
+ 
++#define ETHOS_U55_PRODUCT_CONFIG 0
++#define ETHOS_U65_PRODUCT_CONFIG 1
++#define ETHOS_U85_PRODUCT_CONFIG 2
++
+ enum ethosu_cmds {
+ 	NPU_OP_STOP = 0x0,
+ 	NPU_OP_CONV = 0x2,
+@@ -221,9 +226,9 @@ struct ethosu_device {
+ #define to_ethosu_device(drm_dev) \
+ 	((struct ethosu_device *)container_of(drm_dev, struct ethosu_device, base))
+ 
+-static inline bool ethosu_is_u65(const struct ethosu_device *ethosudev)
++static inline u8 get_ethosu_product(const struct ethosu_device *ethosudev)
+ {
+-	return FIELD_GET(ID_ARCH_MAJOR_MASK, ethosudev->npu_info.id) == 1;
++	return FIELD_GET(CONFIG_PRODUCT, ethosudev->npu_info.config);
+ }
+ 
+ #endif
+diff --git a/drivers/accel/ethosu/ethosu_drv.c b/drivers/accel/ethosu/ethosu_drv.c
+index 8ad040ce3fe7..50ae9f7c70e6 100644
+--- a/drivers/accel/ethosu/ethosu_drv.c
++++ b/drivers/accel/ethosu/ethosu_drv.c
+@@ -240,7 +240,7 @@ static int ethosu_reset(struct ethosu_device *ethosudev)
+ 	 * everything else to AXI M1 (AXILIMIT2)
+ 	 */
+ 	writel_relaxed(0x0000aa8a, ethosudev->regs + NPU_REG_REGIONCFG);
+-	if (ethosu_is_u65(ethosudev)) {
++	if (get_ethosu_product(ethosudev) == ETHOS_U65_PRODUCT_CONFIG) {
+ 		writel_relaxed(U65_SRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT0);
+ 		writel_relaxed(U65_DRAM_AXI_LIMIT_CFG, ethosudev->regs + NPU_REG_AXILIMIT2);
+ 	} else {
+@@ -323,7 +323,7 @@ static int ethosu_init(struct ethosu_device *ethosudev)
+ 
+ 	ethosu_sram_init(ethosudev);
+ 
+-	if (!ethosu_is_u65(ethosudev))
++	if (get_ethosu_product(ethosudev) == ETHOS_U85_PRODUCT_CONFIG)
+ 		ethosudev->pmu_regs += 0x1000;
+ 
+ 	ethosudev->npu_info.pmu_counters = FIELD_GET(PMCR_NUM_EVENT_CNT_MASK,
+diff --git a/drivers/accel/ethosu/ethosu_gem.c b/drivers/accel/ethosu/ethosu_gem.c
+index f2a221c8c53f..5e64f5468c78 100644
+--- a/drivers/accel/ethosu/ethosu_gem.c
++++ b/drivers/accel/ethosu/ethosu_gem.c
+@@ -196,7 +196,7 @@ static bool feat_matrix_chained(struct ethosu_device *edev, struct feat_matrix *
+ {
+ 	u32 storage = fm->precision >> 14;
+ 
+-	return !ethosu_is_u65(edev) && storage == 2;
++	return get_ethosu_product(edev) == ETHOS_U85_PRODUCT_CONFIG && storage == 2;
+ }
+ 
+ static u64 feat_matrix_length(struct ethosu_device *edev,
+@@ -204,7 +204,8 @@ static u64 feat_matrix_length(struct ethosu_device *edev,
+ 			      struct feat_matrix *fm,
+ 			      u32 x, u32 y, u32 c, bool ofm)
+ {
+-	u32 element_size, storage = ethosu_is_u65(edev) ? 0 : fm->precision >> 14;
++	bool is_ethosu_u85 = (get_ethosu_product(edev) == ETHOS_U85_PRODUCT_CONFIG);
++	u32 element_size, storage = is_ethosu_u85 ? fm->precision >> 14 : 0;
+ 	int tile = 0;
+ 	u64 addr;
+ 
+@@ -462,7 +463,7 @@ static int ethosu_gem_cmdstream_copy_and_validate(struct drm_device *ddev,
+ 				return ret;
+ 			break;
+ 		case NPU_OP_ELEMENTWISE:
+-			use_scale = ethosu_is_u65(edev) ?
++			use_scale = (get_ethosu_product(edev) != ETHOS_U85_PRODUCT_CONFIG) ?
+ 				    (st.ifm2.broadcast & 0x80) :
+ 				    (st.ifm2.broadcast == 8);
+ 			use_ifm2 = !(use_scale || (param == 5) ||
+@@ -631,13 +632,13 @@ static int ethosu_gem_cmdstream_copy_and_validate(struct drm_device *ddev,
+ 			st.weight[1].length = cmds[1];
+ 			break;
+ 		case NPU_SET_SCALE1_BASE: // NPU_SET_WEIGHT2_BASE (U85)
+-			if (ethosu_is_u65(edev))
++			if (get_ethosu_product(edev) != ETHOS_U85_PRODUCT_CONFIG)
+ 				st.scale[1].base = addr;
+ 			else
+ 				st.weight[2].base = addr;
+ 			break;
+ 		case NPU_SET_SCALE1_LENGTH: // NPU_SET_WEIGHT2_LENGTH (U85)
+-			if (ethosu_is_u65(edev))
++			if (get_ethosu_product(edev) != ETHOS_U85_PRODUCT_CONFIG)
+ 				st.scale[1].length = cmds[1];
+ 			else
+ 				st.weight[2].length = cmds[1];
+diff --git a/drivers/accel/ethosu/ethosu_perfmon.c b/drivers/accel/ethosu/ethosu_perfmon.c
+index 143927f53051..3013bfe3c59a 100644
+--- a/drivers/accel/ethosu/ethosu_perfmon.c
++++ b/drivers/accel/ethosu/ethosu_perfmon.c
+@@ -169,7 +169,11 @@ int ethosu_ioctl_perfmon_create(struct drm_device *dev, void *data,
+ 		return -EINVAL;
+ 
+ 	/* Make sure all counters are valid. */
+-	event_max = ethosu_is_u65(ethosu) ? 433 : 671;
++	if (get_ethosu_product(ethosu) == ETHOS_U65_PRODUCT_CONFIG)
++		event_max = 433;
++	else
++		event_max = 671;
++
+ 	for (i = 0; i < req->ncounters; i++) {
+ 		if (req->counters[i] > event_max)
+ 			return -EINVAL;
+-- 
+2.34.1
+

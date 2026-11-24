@@ -1,0 +1,104 @@
+mainmenu "Renesas RZ BSP With Ethos-U Support Configuration"
+
+config KAS_BUILD_SYSTEM
+	string
+	default "openembedded"
+
+config KAS_INCLUDE_BUILD
+	string
+	default "kas/base.yml"
+
+menu "Target"
+choice
+	prompt "Select target:"
+	default IMAGE_RENESAS_IMAGE_MINIMAL
+
+	config IMAGE_RENESAS_IMAGE_MINIMAL
+	bool "core-image-minimal"
+	help
+		Use a basic image based on core-image.
+
+	config KAS_INCLUDE_IMAGE_RENESAS_IMAGE_MINIMAL
+	string
+	depends on IMAGE_RENESAS_IMAGE_MINIMAL
+	default "kas/images/core-image-minimal.yml"
+
+	config IMAGE_RENESAS_IMAGE_WESTON
+	bool "core-image-weston"
+	help
+		Build core-image-weston.
+
+	config KAS_INCLUDE_IMAGE_RENESAS_IMAGE_WESTON
+	string
+	depends on IMAGE_RENESAS_IMAGE_WESTON
+	default "kas/images/core-image-weston.yml"
+endchoice
+endmenu
+
+menu "Machine"
+choice
+	prompt "Select machine:"
+	default MACHINE_SMARC-RZG3E
+
+	config MACHINE_SMARC-RZG3E
+	bool "smarc-rzg3e"
+	help
+		The RZ/G3E SMARC EVK.
+
+	config KAS_INCLUDE_MACHINE_SMARC-RZG3E
+	string
+	depends on MACHINE_SMARC-RZG3E
+	default "kas/machines/smarc-rzg3e.yml"
+endchoice
+endmenu
+
+menu "Features"
+	config FEATURE_EXAMPLE_APPS
+	bool "Example Ethos-U Applications"
+	default n
+	help
+		Enable support for the Renesas example Ethos-U applications using meta-rz-ethos-u-examples.
+
+	config KAS_INCLUDE_EXAMPLE_APPS
+	string
+	depends on FEATURE_EXAMPLE_APPS
+	default "kas/features/ethos-u-examples.yml"
+
+	config FEATURE_DEMO_APPS
+	bool "Demo Ethos-U Applications"
+	default n
+	help
+		Enable support for the Renesas demo Ethos-U applications using meta-rz-ethos-u-demos.
+		The meta-rz-ethos-u-demos layer is fetched from GitHub by Kas.
+
+	config KAS_INCLUDE_DEMO_APPS
+	string
+	depends on FEATURE_DEMO_APPS
+	default "kas/features/ethos-u-demos.yml"
+
+	config FEATURE_GRAPHICS
+	bool "Graphics"
+	default n
+	help
+		Enable support for the GPU using meta-rz-graphics.
+		The Renesas Graphics package must be extracted into meta-rz-features/
+		first. See README.md.
+
+	config KAS_INCLUDE_FEATURE_GRAPHICS
+	string
+	depends on FEATURE_GRAPHICS
+	default "kas/features/graphics.yml"
+
+	config FEATURE_CODECS
+	bool "Codecs"
+	default n
+	help
+		Enable support for the H.264 and H.265 video codecs and associated multimedia packages.
+		The Renesas Video Codec package must be extracted into meta-rz-features/
+		first. See README.md.
+
+	config KAS_INCLUDE_FEATURE_CODECS
+	string
+	depends on FEATURE_CODECS
+	default "kas/features/codecs.yml"
+endmenu

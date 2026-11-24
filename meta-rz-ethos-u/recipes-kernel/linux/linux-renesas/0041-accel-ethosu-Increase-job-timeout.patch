@@ -1,0 +1,32 @@
+From e65b0669d6ac795ab6f0a085aa4c1049ef92e8df Mon Sep 17 00:00:00 2001
+From: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+Date: Tue, 22 Sep 2026 13:36:58 +0000
+Subject: [PATCH] accel: ethosu: Increase job timeout
+
+Currently there is a 500ms timeout for the inference job. This may be
+suitable for lighterweight models but is not suitable for larger models
+like unet_segmentation.tflite. So increase the timeout to 5s to allow
+larger models to be ran with the Ethos-U driver.
+
+Upstream-Status: Inappropriate [Renesas BSP tuning]
+Signed-off-by: Ayman Chaudhry <ayman.chaudhry.kc@renesas.com>
+---
+ drivers/accel/ethosu/ethosu_job.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/accel/ethosu/ethosu_job.c b/drivers/accel/ethosu/ethosu_job.c
+index dfbdfda606d1..17cdb33e325d 100644
+--- a/drivers/accel/ethosu/ethosu_job.c
++++ b/drivers/accel/ethosu/ethosu_job.c
+@@ -20,7 +20,7 @@
+ #include "ethosu_gem.h"
+ #include "ethosu_job.h"
+ 
+-#define JOB_TIMEOUT_MS 500
++#define JOB_TIMEOUT_MS 5000
+ 
+ static struct ethosu_job *to_ethosu_job(struct drm_sched_job *sched_job)
+ {
+-- 
+2.34.1
+
